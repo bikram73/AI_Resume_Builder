@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface PersonalInfo {
@@ -32,6 +32,23 @@ interface Project {
 
 export const Builder: React.FC = () => {
   const navigate = useNavigate();
+
+  // Load persisted state on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('resumeBuilderData');
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data.personalInfo) setPersonalInfo(data.personalInfo);
+        if (typeof data.summary === 'string') setSummary(data.summary);
+        if (Array.isArray(data.education)) setEducation(data.education);
+        if (Array.isArray(data.experience)) setExperience(data.experience);
+        if (Array.isArray(data.projects)) setProjects(data.projects);
+        if (typeof data.skills === 'string') setSkills(data.skills);
+        if (data.links) setLinks(data.links);
+      }
+    } catch {}
+  }, []);
   
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
     name: '',
@@ -47,6 +64,22 @@ export const Builder: React.FC = () => {
   const [skills, setSkills] = useState('');
   const [links, setLinks] = useState({ github: '', linkedin: '' });
 
+  // Persist to localStorage whenever any part changes
+  useEffect(() => {
+    const payload = {
+      personalInfo,
+      summary,
+      education,
+      experience,
+      projects,
+      skills,
+      links,
+    };
+    try {
+      localStorage.setItem('resumeBuilderData', JSON.stringify(payload));
+    } catch {}
+  }, [personalInfo, summary, education, experience, projects, skills, links]);
+
   const loadSampleData = () => {
     setPersonalInfo({
       name: 'Jane Doe',
@@ -54,7 +87,7 @@ export const Builder: React.FC = () => {
       phone: '+1 (555) 123-4567',
       location: 'San Francisco, CA'
     });
-    setSummary('Experienced software engineer with 5+ years building scalable web applications. Passionate about clean code and user experience.');
+    setSummary('Experienced software engineer with 5+ years building scalable web applications. Passionate about clean code and user experience. Skilled in React, TypeScript, and cloud-native architectures with a track record of delivering measurable impact in performance and reliability.');
     setEducation([
       { id: '1', school: 'Stanford University', degree: 'BS Computer Science', year: '2018' }
     ]);
@@ -64,14 +97,15 @@ export const Builder: React.FC = () => {
         company: 'Tech Corp', 
         role: 'Senior Software Engineer', 
         duration: '2020 - Present',
-        description: 'Led development of microservices architecture serving 1M+ users'
+        description: 'Led development of microservices architecture serving 1M+ users; improved latency by 35% and reduced costs by 20%.'
       }
     ]);
     setProjects([
-      { id: '1', name: 'AI Resume Builder', description: 'Built premium resume builder with live preview', tech: 'React, TypeScript, Tailwind' }
+      { id: '1', name: 'AI Resume Builder', description: 'Built premium resume builder with live preview and ATS scoring; increased user conversion by 18%.', tech: 'React, TypeScript, Tailwind' },
+      { id: '2', name: 'Analytics Dashboard', description: 'Real-time metrics with alerting; processed 2M+ events/day.', tech: 'Next.js, Node, PostgreSQL' }
     ]);
-    setSkills('React, TypeScript, Node.js, Python, AWS, Docker');
-    setLinks({ github: 'github.com/janedoe', linkedin: 'linkedin.com/in/janedoe' });
+    setSkills('React, TypeScript, Node.js, Python, AWS, Docker, PostgreSQL, GraphQL');
+    setLinks({ github: 'https://github.com/janedoe', linkedin: 'https://linkedin.com/in/janedoe' });
   };
 
   const addEducation = () => {
@@ -354,22 +388,38 @@ export const Builder: React.FC = () => {
           </section>
         </div>
 
-        {/* Right: Live Preview */}
+        {/* Right: Live Preview + ATS Score */}
         <div className="w-1/2 overflow-y-auto p-10 bg-white">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-2xl font-serif font-bold text-gray-900 mb-8 text-center">Live Preview</h2>
+
+            {/* ATS Score Card */}
+            <ATSMetrics
+              summary={summary}
+              projects={projects}
+              experience={experience}
+              skills={skills}
+              links={links}
+              education={education}
+            />
             
             {/* Resume Preview Shell */}
-            <div className="bg-white border border-gray-300 p-10 shadow-sm">
+            <div className="bg-white border border-gray-300 p-10 shadow-sm mt-6">
               {/* Header */}
               <div className="text-center mb-8 pb-6 border-b border-gray-200">
                 <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">
                   {personalInfo.name || 'Your Name'}
                 </h1>
                 <div className="text-sm text-gray-600 space-x-2">
-                  <span>{personalInfo.email || 'email@example.com'}</span>
-                  {personalInfo.phone && <span>• {personalInfo.phone}</span>}
-                  {personalInfo.location && <span>• {personalInfo.location}</span>}
+                  {(personalInfo.email || personalInfo.phone || personalInfo.location) ? (
+                    <>
+                      {personalInfo.email && <span>{personalInfo.email}</span>}
+                      {personalInfo.phone && <span>• {personalInfo.phone}</span>}
+                      {personalInfo.location && <span>• {personalInfo.location}</span>}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">email@example.com • 000-000-0000 • City, ST</span>
+                  )}
                 </div>
               </div>
 
@@ -377,64 +427,66 @@ export const Builder: React.FC = () => {
               {summary && (
                 <div className="mb-6">
                   <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1">Summary</h2>
-                  <p className="text-sm text-gray-700 leading-relaxed">{summary}</p>
+                  <p className="text-sm text-gray-800 leading-relaxed">{summary}</p>
                 </div>
               )}
 
-              {/* Experience */}
-              {experience.length > 0 && (
+              {/* Education */}
+              {education.filter(e => e.school || e.degree || e.year).length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1">Experience</h2>
-                  {experience.map(exp => (
-                    <div key={exp.id} className="mb-4">
-                      <div className="flex justify-between items-baseline mb-1">
-                        <h3 className="font-bold text-gray-900">{exp.role || 'Role'}</h3>
-                        <span className="text-xs text-gray-500">{exp.duration}</span>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1">Education</h2>
+                  {education.filter(e => e.school || e.degree || e.year).map(edu => (
+                    <div key={edu.id} className="mb-2">
+                      <div className="flex justify-between items-baseline">
+                        <div>
+                          {(edu.degree || edu.school) && (
+                            <h3 className="font-bold text-gray-900">{edu.degree || edu.school}</h3>
+                          )}
+                          {edu.school && <p className="text-sm text-gray-600">{edu.school}</p>}
+                        </div>
+                        {edu.year && <span className="text-xs text-gray-500">{edu.year}</span>}
                       </div>
-                      <p className="text-sm text-gray-600 mb-1">{exp.company || 'Company'}</p>
-                      <p className="text-sm text-gray-700">{exp.description}</p>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Education */}
-              {education.length > 0 && (
+              {/* Experience */}
+              {experience.filter(e => e.company || e.role || e.duration || e.description).length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1">Education</h2>
-                  {education.map(edu => (
-                    <div key={edu.id} className="mb-2">
-                      <div className="flex justify-between items-baseline">
-                        <div>
-                          <h3 className="font-bold text-gray-900">{edu.degree || 'Degree'}</h3>
-                          <p className="text-sm text-gray-600">{edu.school || 'School'}</p>
-                        </div>
-                        <span className="text-xs text-gray-500">{edu.year}</span>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1">Experience</h2>
+                  {experience.filter(e => e.company || e.role || e.duration || e.description).map(exp => (
+                    <div key={exp.id} className="mb-4">
+                      <div className="flex justify-between items-baseline mb-1">
+                        {exp.role && <h3 className="font-bold text-gray-900">{exp.role}</h3>}
+                        {exp.duration && <span className="text-xs text-gray-500">{exp.duration}</span>}
                       </div>
+                      {exp.company && <p className="text-sm text-gray-600 mb-1">{exp.company}</p>}
+                      {exp.description && <p className="text-sm text-gray-800 leading-relaxed">{exp.description}</p>}
                     </div>
                   ))}
                 </div>
               )}
 
               {/* Projects */}
-              {projects.length > 0 && (
+              {projects.filter(p => p.name || p.description || p.tech).length > 0 && (
                 <div className="mb-6">
                   <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1">Projects</h2>
-                  {projects.map(proj => (
+                  {projects.filter(p => p.name || p.description || p.tech).map(proj => (
                     <div key={proj.id} className="mb-3">
-                      <h3 className="font-bold text-gray-900">{proj.name || 'Project Name'}</h3>
-                      <p className="text-sm text-gray-700 mb-1">{proj.description}</p>
-                      <p className="text-xs text-gray-500 italic">{proj.tech}</p>
+                      {proj.name && <h3 className="font-bold text-gray-900">{proj.name}</h3>}
+                      {proj.description && <p className="text-sm text-gray-800 leading-relaxed mb-1">{proj.description}</p>}
+                      {proj.tech && <p className="text-xs text-gray-500 italic">{proj.tech}</p>}
                     </div>
                   ))}
                 </div>
               )}
 
               {/* Skills */}
-              {skills && (
+              {skills && skills.trim().length > 0 && (
                 <div className="mb-6">
                   <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1">Skills</h2>
-                  <p className="text-sm text-gray-700">{skills}</p>
+                  <p className="text-sm text-gray-800">{skills}</p>
                 </div>
               )}
 
@@ -442,7 +494,7 @@ export const Builder: React.FC = () => {
               {(links.github || links.linkedin) && (
                 <div>
                   <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1">Links</h2>
-                  <div className="text-sm text-gray-700 space-y-1">
+                  <div className="text-sm text-gray-800 space-y-1">
                     {links.github && <div>GitHub: {links.github}</div>}
                     {links.linkedin && <div>LinkedIn: {links.linkedin}</div>}
                   </div>
@@ -452,6 +504,89 @@ export const Builder: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Premium, calm ATS score meter + suggestions
+const ATSMetrics: React.FC<{
+  summary: string;
+  projects: Project[];
+  experience: Experience[];
+  skills: string;
+  links: { github: string; linkedin: string };
+  education: Education[];
+}> = ({ summary, projects, experience, skills, links, education }) => {
+  const scoreInfo = useMemo(() => {
+    let score = 0;
+    const suggestions: string[] = [];
+
+    // Summary 40-120 words => +15
+    const summaryWordCount = summary ? summary.trim().split(/\s+/).filter(Boolean).length : 0;
+    const hasGoodSummary = summaryWordCount >= 40 && summaryWordCount <= 120;
+    if (hasGoodSummary) score += 15; else suggestions.push('Write a stronger summary (40–120 words).');
+
+    // Projects >= 2 => +10
+    const projectCount = projects.filter(p => p.name || p.description).length;
+    if (projectCount >= 2) score += 10; else suggestions.push('Add at least 2 projects.');
+
+    // Experience >= 1 => +10
+    const experienceCount = experience.filter(e => e.company || e.role || e.description).length;
+    if (experienceCount >= 1) score += 10; else suggestions.push('Add at least 1 experience entry.');
+
+    // Skills >= 8 items => +10
+    const skillsItems = skills.split(',').map(s => s.trim()).filter(Boolean);
+    if (skillsItems.length >= 8) score += 10; else suggestions.push('Add more skills (target 8+).');
+
+    // Links include GitHub or LinkedIn => +10
+    const hasSocial = Boolean(links.github?.trim()) || Boolean(links.linkedin?.trim());
+    if (hasSocial) score += 10; else suggestions.push('Add GitHub or LinkedIn link.');
+
+    // Any number in experience/project bullets => +15
+    const textBlobs = [
+      ...experience.map(e => `${e.description}`),
+      ...projects.map(p => `${p.description}`),
+    ].join(' \n ');
+    const hasNumbers = /([0-9]+|%|k|K|m|M|x|X)/.test(textBlobs);
+    if (hasNumbers) score += 15; else suggestions.push('Add measurable impact (numbers) in bullets.');
+
+    // Education completeness => +10 (any entry with school, degree, year)
+    const hasCompleteEducation = education.some(e => e.school && e.degree && e.year);
+    if (hasCompleteEducation) score += 10; else suggestions.push('Complete education with school, degree, and year.');
+
+    if (score > 100) score = 100;
+
+    return {
+      score,
+      suggestions: suggestions.slice(0, 3)
+    };
+  }, [summary, projects, experience, skills, links, education]);
+
+  const pct = scoreInfo.score;
+
+  return (
+    <div className="border border-gray-300 bg-[#F7F6F3] p-5">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-bold uppercase tracking-widest text-gray-500">ATS Readiness Score</span>
+        <span className="text-sm font-serif font-bold text-gray-900">{pct}/100</span>
+      </div>
+      <div className="w-full h-3 bg-white border border-gray-300 relative">
+        <div
+          className="h-full"
+          style={{
+            width: `${pct}%`,
+            background: 'linear-gradient(90deg, #cbd5e1 0%, #8B0000 100%)',
+            transition: 'width 200ms ease-out'
+          }}
+        />
+      </div>
+      {scoreInfo.suggestions.length > 0 && (
+        <ul className="mt-3 list-disc list-inside text-xs text-gray-700 space-y-1">
+          {scoreInfo.suggestions.map((s, i) => (
+            <li key={i}>{s}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };
