@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ATSMetrics } from '../components/ATSMetrics';
 
 interface PersonalInfo {
   name: string;
@@ -33,6 +34,26 @@ interface Project {
 export const Builder: React.FC = () => {
   const navigate = useNavigate();
 
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
+    name: '',
+    email: '',
+    phone: '',
+    location: ''
+  });
+  
+  const [summary, setSummary] = useState('');
+  const [education, setEducation] = useState<Education[]>([]);
+  const [experience, setExperience] = useState<Experience[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [skills, setSkills] = useState('');
+  const [links, setLinks] = useState({ github: '', linkedin: '' });
+
+  // Template selection (persisted)
+  const [template, setTemplate] = useState<'Classic' | 'Modern' | 'Minimal'>(() => {
+    const saved = localStorage.getItem('resumeTemplate');
+    return (saved === 'Modern' || saved === 'Minimal' || saved === 'Classic') ? saved : 'Classic';
+  });
+
   // Load persisted state on mount
   useEffect(() => {
     try {
@@ -49,20 +70,11 @@ export const Builder: React.FC = () => {
       }
     } catch {}
   }, []);
-  
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    name: '',
-    email: '',
-    phone: '',
-    location: ''
-  });
-  
-  const [summary, setSummary] = useState('');
-  const [education, setEducation] = useState<Education[]>([]);
-  const [experience, setExperience] = useState<Experience[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [skills, setSkills] = useState('');
-  const [links, setLinks] = useState({ github: '', linkedin: '' });
+
+  // Persist template choice
+  useEffect(() => {
+    try { localStorage.setItem('resumeTemplate', template); } catch {}
+  }, [template]);
 
   // Persist to localStorage whenever any part changes
   useEffect(() => {
@@ -119,6 +131,30 @@ export const Builder: React.FC = () => {
   const addProject = () => {
     setProjects([...projects, { id: Date.now().toString(), name: '', description: '', tech: '' }]);
   };
+
+  // Template style helper
+  const tpl = useMemo(() => {
+    switch (template) {
+      case 'Modern':
+        return {
+          container: 'shadow-lg',
+          sectionTitle: 'tracking-widest text-black',
+          name: 'tracking-tight',
+        };
+      case 'Minimal':
+        return {
+          container: 'border-gray-200',
+          sectionTitle: 'text-gray-900 font-medium',
+          name: 'text-2xl',
+        };
+      default: // Classic
+        return {
+          container: '',
+          sectionTitle: '',
+          name: '',
+        };
+    }
+  }, [template]);
 
   return (
     <div className="min-h-screen bg-[#F7F6F3]">
@@ -290,7 +326,7 @@ export const Builder: React.FC = () => {
                   className="w-full bg-[#F7F6F3] border border-gray-300 p-2 text-gray-900 focus:border-[#8B0000] focus:outline-none mb-2"
                 />
                 <textarea
-                  placeholder="Description"
+                  placeholder="Description (one bullet per line)"
                   value={exp.description}
                   onChange={e => {
                     const updated = [...experience];
@@ -300,6 +336,26 @@ export const Builder: React.FC = () => {
                   rows={3}
                   className="w-full bg-[#F7F6F3] border border-gray-300 p-2 text-gray-900 focus:border-[#8B0000] focus:outline-none resize-none"
                 />
+                {/* Bullet Guidance */}
+                {(() => {
+                  const lines = (exp.description || '').split(/\n/).map(l => l.trim()).filter(Boolean);
+                  if (lines.length === 0) return null;
+                  const verbs = /^(Built|Developed|Designed|Implemented|Led|Improved|Created|Optimized|Automated)\b/i;
+                  const hasNumber = /([0-9]+|%|k|K|m|M|x|X)/;
+                  const firstLine = lines[0];
+                  const missingVerb = !verbs.test(firstLine);
+                  const noNumbers = !hasNumber.test(lines.join(' '));
+                  return (
+                    <div className="mt-2 space-y-1">
+                      {missingVerb && (
+                        <div className="text-[11px] text-gray-500">Start with a strong action verb.</div>
+                      )}
+                      {noNumbers && (
+                        <div className="text-[11px] text-gray-500">Add measurable impact (numbers).</div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </section>
@@ -329,7 +385,7 @@ export const Builder: React.FC = () => {
                   className="w-full bg-[#F7F6F3] border border-gray-300 p-2 text-gray-900 focus:border-[#8B0000] focus:outline-none mb-2"
                 />
                 <textarea
-                  placeholder="Description"
+                  placeholder="Description (one bullet per line)"
                   value={proj.description}
                   onChange={e => {
                     const updated = [...projects];
@@ -339,6 +395,26 @@ export const Builder: React.FC = () => {
                   rows={2}
                   className="w-full bg-[#F7F6F3] border border-gray-300 p-2 text-gray-900 focus:border-[#8B0000] focus:outline-none resize-none mb-2"
                 />
+                {/* Bullet Guidance */}
+                {(() => {
+                  const lines = (proj.description || '').split(/\n/).map(l => l.trim()).filter(Boolean);
+                  if (lines.length === 0) return null;
+                  const verbs = /^(Built|Developed|Designed|Implemented|Led|Improved|Created|Optimized|Automated)\b/i;
+                  const hasNumber = /([0-9]+|%|k|K|m|M|x|X)/;
+                  const firstLine = lines[0];
+                  const missingVerb = !verbs.test(firstLine);
+                  const noNumbers = !hasNumber.test(lines.join(' '));
+                  return (
+                    <div className="-mt-1 mb-1 space-y-1">
+                      {missingVerb && (
+                        <div className="text-[11px] text-gray-500">Start with a strong action verb.</div>
+                      )}
+                      {noNumbers && (
+                        <div className="text-[11px] text-gray-500">Add measurable impact (numbers).</div>
+                      )}
+                    </div>
+                  );
+                })()}
                 <input
                   type="text"
                   placeholder="Technologies"
@@ -391,7 +467,24 @@ export const Builder: React.FC = () => {
         {/* Right: Live Preview + ATS Score */}
         <div className="w-1/2 overflow-y-auto p-10 bg-white">
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-2xl font-serif font-bold text-gray-900 mb-8 text-center">Live Preview</h2>
+            {/* Template Tabs */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              {(['Classic','Modern','Minimal'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTemplate(t)}
+                  className={`px-3 py-1.5 text-xs uppercase font-bold border transition-colors ${
+                    template === t 
+                      ? 'border-black text-black' 
+                      : 'border-gray-300 text-gray-600 hover:border-gray-500'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+
+            <h2 className="text-2xl font-serif font-bold text-gray-900 mb-4 text-center">Live Preview</h2>
 
             {/* ATS Score Card */}
             <ATSMetrics
@@ -404,10 +497,10 @@ export const Builder: React.FC = () => {
             />
             
             {/* Resume Preview Shell */}
-            <div className="bg-white border border-gray-300 p-10 shadow-sm mt-6">
+            <div className={`bg-white border border-gray-300 p-10 mt-6 ${tpl.container}`}>
               {/* Header */}
               <div className="text-center mb-8 pb-6 border-b border-gray-200">
-                <h1 className="text-3xl font-serif font-bold text-gray-900 mb-2">
+                <h1 className={`text-3xl font-serif font-bold text-gray-900 mb-2 ${tpl.name}`}>
                   {personalInfo.name || 'Your Name'}
                 </h1>
                 <div className="text-sm text-gray-600 space-x-2">
@@ -426,7 +519,9 @@ export const Builder: React.FC = () => {
               {/* Summary */}
               {summary && (
                 <div className="mb-6">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1">Summary</h2>
+                  <h2 className={`text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1 ${tpl.sectionTitle}`}>
+                    Summary
+                  </h2>
                   <p className="text-sm text-gray-800 leading-relaxed">{summary}</p>
                 </div>
               )}
@@ -434,7 +529,9 @@ export const Builder: React.FC = () => {
               {/* Education */}
               {education.filter(e => e.school || e.degree || e.year).length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1">Education</h2>
+                  <h2 className={`text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1 ${tpl.sectionTitle}`}>
+                    Education
+                  </h2>
                   {education.filter(e => e.school || e.degree || e.year).map(edu => (
                     <div key={edu.id} className="mb-2">
                       <div className="flex justify-between items-baseline">
@@ -442,7 +539,7 @@ export const Builder: React.FC = () => {
                           {(edu.degree || edu.school) && (
                             <h3 className="font-bold text-gray-900">{edu.degree || edu.school}</h3>
                           )}
-                          {edu.school && <p className="text-sm text-gray-600">{edu.school}</p>}
+                          {edu.school && edu.degree && <p className="text-sm text-gray-600">{edu.school}</p>}
                         </div>
                         {edu.year && <span className="text-xs text-gray-500">{edu.year}</span>}
                       </div>
@@ -454,7 +551,9 @@ export const Builder: React.FC = () => {
               {/* Experience */}
               {experience.filter(e => e.company || e.role || e.duration || e.description).length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1">Experience</h2>
+                  <h2 className={`text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1 ${tpl.sectionTitle}`}>
+                    Experience
+                  </h2>
                   {experience.filter(e => e.company || e.role || e.duration || e.description).map(exp => (
                     <div key={exp.id} className="mb-4">
                       <div className="flex justify-between items-baseline mb-1">
@@ -471,7 +570,9 @@ export const Builder: React.FC = () => {
               {/* Projects */}
               {projects.filter(p => p.name || p.description || p.tech).length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1">Projects</h2>
+                  <h2 className={`text-sm font-bold uppercase tracking-wider text-gray-900 mb-3 border-b border-gray-300 pb-1 ${tpl.sectionTitle}`}>
+                    Projects
+                  </h2>
                   {projects.filter(p => p.name || p.description || p.tech).map(proj => (
                     <div key={proj.id} className="mb-3">
                       {proj.name && <h3 className="font-bold text-gray-900">{proj.name}</h3>}
@@ -485,7 +586,9 @@ export const Builder: React.FC = () => {
               {/* Skills */}
               {skills && skills.trim().length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1">Skills</h2>
+                  <h2 className={`text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1 ${tpl.sectionTitle}`}>
+                    Skills
+                  </h2>
                   <p className="text-sm text-gray-800">{skills}</p>
                 </div>
               )}
@@ -493,7 +596,9 @@ export const Builder: React.FC = () => {
               {/* Links */}
               {(links.github || links.linkedin) && (
                 <div>
-                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1">Links</h2>
+                  <h2 className={`text-sm font-bold uppercase tracking-wider text-gray-900 mb-2 border-b border-gray-300 pb-1 ${tpl.sectionTitle}`}>
+                    Links
+                  </h2>
                   <div className="text-sm text-gray-800 space-y-1">
                     {links.github && <div>GitHub: {links.github}</div>}
                     {links.linkedin && <div>LinkedIn: {links.linkedin}</div>}
@@ -504,89 +609,6 @@ export const Builder: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-// Premium, calm ATS score meter + suggestions
-const ATSMetrics: React.FC<{
-  summary: string;
-  projects: Project[];
-  experience: Experience[];
-  skills: string;
-  links: { github: string; linkedin: string };
-  education: Education[];
-}> = ({ summary, projects, experience, skills, links, education }) => {
-  const scoreInfo = useMemo(() => {
-    let score = 0;
-    const suggestions: string[] = [];
-
-    // Summary 40-120 words => +15
-    const summaryWordCount = summary ? summary.trim().split(/\s+/).filter(Boolean).length : 0;
-    const hasGoodSummary = summaryWordCount >= 40 && summaryWordCount <= 120;
-    if (hasGoodSummary) score += 15; else suggestions.push('Write a stronger summary (40–120 words).');
-
-    // Projects >= 2 => +10
-    const projectCount = projects.filter(p => p.name || p.description).length;
-    if (projectCount >= 2) score += 10; else suggestions.push('Add at least 2 projects.');
-
-    // Experience >= 1 => +10
-    const experienceCount = experience.filter(e => e.company || e.role || e.description).length;
-    if (experienceCount >= 1) score += 10; else suggestions.push('Add at least 1 experience entry.');
-
-    // Skills >= 8 items => +10
-    const skillsItems = skills.split(',').map(s => s.trim()).filter(Boolean);
-    if (skillsItems.length >= 8) score += 10; else suggestions.push('Add more skills (target 8+).');
-
-    // Links include GitHub or LinkedIn => +10
-    const hasSocial = Boolean(links.github?.trim()) || Boolean(links.linkedin?.trim());
-    if (hasSocial) score += 10; else suggestions.push('Add GitHub or LinkedIn link.');
-
-    // Any number in experience/project bullets => +15
-    const textBlobs = [
-      ...experience.map(e => `${e.description}`),
-      ...projects.map(p => `${p.description}`),
-    ].join(' \n ');
-    const hasNumbers = /([0-9]+|%|k|K|m|M|x|X)/.test(textBlobs);
-    if (hasNumbers) score += 15; else suggestions.push('Add measurable impact (numbers) in bullets.');
-
-    // Education completeness => +10 (any entry with school, degree, year)
-    const hasCompleteEducation = education.some(e => e.school && e.degree && e.year);
-    if (hasCompleteEducation) score += 10; else suggestions.push('Complete education with school, degree, and year.');
-
-    if (score > 100) score = 100;
-
-    return {
-      score,
-      suggestions: suggestions.slice(0, 3)
-    };
-  }, [summary, projects, experience, skills, links, education]);
-
-  const pct = scoreInfo.score;
-
-  return (
-    <div className="border border-gray-300 bg-[#F7F6F3] p-5">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-bold uppercase tracking-widest text-gray-500">ATS Readiness Score</span>
-        <span className="text-sm font-serif font-bold text-gray-900">{pct}/100</span>
-      </div>
-      <div className="w-full h-3 bg-white border border-gray-300 relative">
-        <div
-          className="h-full"
-          style={{
-            width: `${pct}%`,
-            background: 'linear-gradient(90deg, #cbd5e1 0%, #8B0000 100%)',
-            transition: 'width 200ms ease-out'
-          }}
-        />
-      </div>
-      {scoreInfo.suggestions.length > 0 && (
-        <ul className="mt-3 list-disc list-inside text-xs text-gray-700 space-y-1">
-          {scoreInfo.suggestions.map((s, i) => (
-            <li key={i}>{s}</li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 };

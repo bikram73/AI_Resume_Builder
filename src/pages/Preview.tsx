@@ -1,8 +1,42 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export const Preview: React.FC = () => {
   const navigate = useNavigate();
+
+  const [template, setTemplate] = useState<'Classic' | 'Modern' | 'Minimal'>(() => {
+    const saved = localStorage.getItem('resumeTemplate');
+    return (saved === 'Modern' || saved === 'Minimal' || saved === 'Classic') ? (saved as any) : 'Classic';
+  });
+  useEffect(() => {
+    try { localStorage.setItem('resumeTemplate', template); } catch {}
+  }, [template]);
+
+  const tpl = useMemo(() => {
+    switch (template) {
+      case 'Modern':
+        return {
+          outer: 'bg-white shadow-xl',
+          sectionTitle: 'tracking-widest',
+          name: 'tracking-tight',
+          divider: 'border-b-2 border-black',
+        };
+      case 'Minimal':
+        return {
+          outer: 'bg-white border border-gray-300',
+          sectionTitle: 'text-gray-900 font-medium',
+          name: 'text-3xl',
+          divider: 'border-b border-black',
+        };
+      default:
+        return {
+          outer: 'bg-white shadow-2xl',
+          sectionTitle: '',
+          name: '',
+          divider: 'border-b-2 border-black',
+        };
+    }
+  }, [template]);
 
   return (
     <div className="min-h-screen bg-[#F7F6F3]">
@@ -20,12 +54,22 @@ export const Preview: React.FC = () => {
 
       {/* Preview Content */}
       <div className="flex items-center justify-center p-16">
-        <div className="w-full max-w-4xl bg-white shadow-2xl">
+        <div className={`w-full max-w-4xl ${tpl.outer}`}>
+          {/* Template Tabs */}
+          <div className="px-16 pt-8 flex items-center justify-center gap-3">
+            {(['Classic','Modern','Minimal'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setTemplate(t)}
+                className={`px-3 py-1.5 text-xs uppercase font-bold border ${template===t? 'border-black text-black' : 'border-gray-300 text-gray-600 hover:border-gray-500'}`}
+              >{t}</button>
+            ))}
+          </div>
           {/* A4 Paper Simulation */}
           <div className="p-16">
             {/* Header */}
-            <div className="text-center mb-10 pb-8 border-b-2 border-black">
-              <h1 className="text-4xl font-serif font-bold text-black mb-3 tracking-tight">
+            <div className={`text-center mb-10 pb-8 ${tpl.divider}`}>
+              <h1 className={`text-4xl font-serif font-bold text-black mb-3 ${tpl.name}`}>
                 Jane Doe
               </h1>
               <div className="text-sm text-gray-800 space-x-3">
@@ -39,7 +83,7 @@ export const Preview: React.FC = () => {
 
             {/* Summary */}
             <div className="mb-8">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-black mb-3 border-b border-black pb-1">
+              <h2 className={`text-xs font-bold uppercase text-black mb-3 border-b border-black pb-1 ${tpl.sectionTitle}`}>
                 Professional Summary
               </h2>
               <p className="text-sm text-black leading-relaxed">
@@ -50,7 +94,7 @@ export const Preview: React.FC = () => {
 
             {/* Experience */}
             <div className="mb-8">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-black mb-3 border-b border-black pb-1">
+              <h2 className={`text-xs font-bold uppercase text-black mb-3 border-b border-black pb-1 ${tpl.sectionTitle}`}>
                 Experience
               </h2>
               <div className="mb-5">
@@ -68,7 +112,7 @@ export const Preview: React.FC = () => {
 
             {/* Education */}
             <div className="mb-8">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-black mb-3 border-b border-black pb-1">
+              <h2 className={`text-xs font-bold uppercase text-black mb-3 border-b border-black pb-1 ${tpl.sectionTitle}`}>
                 Education
               </h2>
               <div className="flex justify-between items-baseline">
@@ -82,7 +126,7 @@ export const Preview: React.FC = () => {
 
             {/* Projects */}
             <div className="mb-8">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-black mb-3 border-b border-black pb-1">
+              <h2 className={`text-xs font-bold uppercase text-black mb-3 border-b border-black pb-1 ${tpl.sectionTitle}`}>
                 Projects
               </h2>
               <div className="mb-4">
@@ -96,7 +140,7 @@ export const Preview: React.FC = () => {
 
             {/* Skills */}
             <div className="mb-8">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-black mb-3 border-b border-black pb-1">
+              <h2 className={`text-xs font-bold uppercase text-black mb-3 border-b border-black pb-1 ${tpl.sectionTitle}`}>
                 Skills
               </h2>
               <p className="text-sm text-black">
@@ -106,7 +150,7 @@ export const Preview: React.FC = () => {
 
             {/* Links */}
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-widest text-black mb-3 border-b border-black pb-1">
+              <h2 className={`text-xs font-bold uppercase text-black mb-3 border-b border-black pb-1 ${tpl.sectionTitle}`}>
                 Links
               </h2>
               <div className="text-sm text-black space-y-1">
