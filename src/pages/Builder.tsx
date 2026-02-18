@@ -653,7 +653,6 @@ export const Builder: React.FC = () => {
 
             {/* ATS Score Card */}
             <ATSMetrics
-              template={template}
               summary={summary}
               projects={projects}
               experience={experience}
@@ -820,14 +819,13 @@ export const Builder: React.FC = () => {
 
 // Premium, calm ATS score meter + suggestions
 const ATSMetrics: React.FC<{
-  template: 'Classic' | 'Modern' | 'Minimal';
   summary: string;
   projects: Project[];
   experience: Experience[];
   skills: string; // flattened string
   links: { github: string; linkedin: string };
   education: Education[];
-}> = ({ template, summary, projects, experience, skills, links, education }) => {
+}> = ({ summary, projects, experience, skills, links, education }) => {
   const scoreInfo = useMemo(() => {
     let score = 0;
     const suggestions: string[] = [];
