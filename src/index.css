@@ -6,3 +6,27 @@ html, body, #root {
   height: 100%;
   margin: 0;
 }
+
+/* Print styles for clean PDF output */
+@media print {
+  /* Reset background for pure white */
+  html, body {
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Hide navigation and non-content UI */
+  .no-print { display: none !important; }
+  /* Page setup and margins */
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  /* Prevent breaking within key sections */
+  .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+  /* Make sure containers expand and avoid shadows/borders that look heavy in print */
+  .print\:p-8 { padding: 32px !important; }
+  .print\:w-\[210mm\] { width: 210mm !important; }
+  /* Neutralize any box shadows for print cleanliness */
+  * { box-shadow: none !important; }
+}
