@@ -1,4 +1,4 @@
-cl# 🚀 AI Resume Builder
+## 🚀 AI Resume Builder
 
 A premium, deterministic, ATS-aware resume builder built with React + TypeScript + Vite + Tailwind CSS. It features live preview, multi-template layouts, accent color themes, structured editing with persistence, export options, inline guidance, ATS scoring, and a final Proof/Submission workflow.
 
