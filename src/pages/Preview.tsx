@@ -33,6 +33,21 @@ export const Preview: React.FC = () => {
     } catch {}
   }, []);
 
+  // Reflect live edits saved to localStorage from Builder
+  useEffect(() => {
+    const id = setInterval(() => {
+      try {
+        const raw = localStorage.getItem('resumeBuilderData');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        const prev = JSON.stringify(builderData || {});
+        const next = JSON.stringify(parsed || {});
+        if (prev !== next) setBuilderData(parsed);
+      } catch {}
+    }, 800);
+    return () => clearInterval(id);
+  }, [builderData]);
+
   // Validation warning (non-blocking)
   const missingCritical = useMemo(() => {
     const name = builderData?.personalInfo?.name?.trim();
@@ -40,6 +55,72 @@ export const Preview: React.FC = () => {
     const projs = (builderData?.projects || []).filter((p: any) => p.name || p.title || p.description);
     return !name || (exps.length + projs.length) === 0;
   }, [builderData]);
+
+  // ATS score computation (deterministic)
+  const ats = useMemo(() => {
+    const d = builderData || {};
+    const name = (d.personalInfo?.name || '').trim();
+    const email = (d.personalInfo?.email || '').trim();
+    const phone = (d.personalInfo?.phone || '').trim();
+    const linkedin = (d.links?.linkedin || '').trim();
+    const github = (d.links?.github || '').trim();
+    const summary = (d.summary || '').trim();
+
+    const experiences: any[] = Array.isArray(d.experience) ? d.experience : [];
+    const hasExperienceWithBullets = experiences.some(e => {
+      const lines = String(e?.description || '').split(/\n/).map((l:string)=>l.trim()).filter(Boolean);
+      return lines.length > 0;
+    });
+
+    const educations: any[] = Array.isArray(d.education) ? d.education : [];
+    const hasEducation = educations.some(e => e.school || e.degree || e.year);
+
+    // Skills count from string or grouped object
+    let skillsCount = 0;
+    if (typeof d.skills === 'string') {
+      skillsCount = d.skills.split(',').map((s:string)=>s.trim()).filter(Boolean).length;
+    } else if (d.skills && typeof d.skills === 'object') {
+      const s = d.skills as any;
+      skillsCount = [ ...(s.technical||[]), ...(s.soft||[]), ...(s.tools||[]) ].filter(Boolean).length;
+    }
+
+    const projects: any[] = Array.isArray(d.projects) ? d.projects : [];
+    const hasProject = projects.some(p => p.title || p.name || p.description || p.tech || (Array.isArray(p.techStack) && p.techStack.length));
+
+    // Summary verbs
+    const verbRe = /\b(Built|Developed|Designed|Implemented|Led|Improved|Created|Optimized|Automated)\b/i;
+
+    let score = 0;
+    const missing: string[] = [];
+
+    if (name) score += 10; else missing.push('Add your name (+10 points)');
+    if (email) score += 10; else missing.push('Add your email (+10 points)');
+    if (summary.length > 50) score += 10; else missing.push('Write a professional summary over 50 characters (+10 points)');
+    if (hasExperienceWithBullets) score += 15; else missing.push('Add experience with bullet points (+15 points)');
+    if (hasEducation) score += 10; else missing.push('Add your education (+10 points)');
+    if (skillsCount >= 5) score += 10; else missing.push('Add at least 5 skills (+10 points)');
+    if (hasProject) score += 10; else missing.push('Add at least one project (+10 points)');
+    if (phone) score += 5; else missing.push('Add your phone number (+5 points)');
+    if (linkedin) score += 5; else missing.push('Add your LinkedIn URL (+5 points)');
+    if (github) score += 5; else missing.push('Add your GitHub URL (+5 points)');
+    if (verbRe.test(summary)) score += 10; else missing.push('Use action verbs in your summary (+10 points)');
+
+    if (score > 100) score = 100;
+
+    let color = '#b91c1c';
+    let label = 'Needs Work';
+    if (score >= 71) { color = '#15803d'; label = 'Strong Resume'; }
+    else if (score >= 41) { color = '#b45309'; label = 'Getting There'; }
+
+    return { score, missing, color, label };
+  }, [builderData]);
+
+  const circle = useMemo(() => {
+    const r = 42; const c = 2 * Math.PI * r;
+    const s = Math.max(0, Math.min(100, ats.score));
+    const o = c * (1 - s / 100);
+    return { r, c, o };
+  }, [ats.score]);
 
   // Print + toast
   const [toast, setToast] = useState(false);
@@ -466,6 +547,26 @@ export const Preview: React.FC = () => {
                 <button onClick={handlePrint} className="px-3 py-1.5 text-xs uppercase font-bold border border-black text-black">Download PDF</button>
               </div>
             </div>
+          </div>
+
+          {/* ATS Score (no print) */}
+          <div className="px-10 pt-6 no-print">
+            <div className="flex items-center gap-6">
+              <svg width="110" height="110" viewBox="0 0 110 110">
+                <circle cx="55" cy="55" r={circle.r} stroke="#e5e7eb" strokeWidth="8" fill="none" />
+                <circle cx="55" cy="55" r={circle.r} stroke={ats.color} strokeWidth="8" fill="none" strokeDasharray={circle.c} strokeDashoffset={circle.o} transform="rotate(-90 55 55)" strokeLinecap="round" />
+                <text x="55" y="60" textAnchor="middle" className="fill-black" fontSize="18" fontWeight="700">{ats.score}</text>
+              </svg>
+              <div>
+                <div className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>{ats.label}</div>
+                <div className="text-2xl font-serif font-bold text-black">ATS Score</div>
+              </div>
+            </div>
+            {ats.missing && ats.missing.length > 0 && (
+              <ul className="mt-3 list-disc list-inside text-xs text-gray-700 space-y-1">
+                {ats.missing.map((m, i) => (<li key={i}>{m}</li>))}
+              </ul>
+            )}
           </div>
 
           {/* A4 Paper Simulation (per-template) */}
